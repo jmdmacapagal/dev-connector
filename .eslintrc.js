@@ -21,6 +21,10 @@ module.exports = {
     ],
     "rules": {
         "linebreak-style": 0,
-        "no-console": 0
+        "no-console": 0,
+        "no-tabs": 0,
+        "indent": [
+            "error", 4
+        ]
     }
 };
