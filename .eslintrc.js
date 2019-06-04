@@ -26,6 +26,7 @@ module.exports = {
         "indent": [
             "error", 4
         ],
-        "comma-dangle": ["error", "never"]
+        "comma-dangle": ["error", "never"],
+        "consistent-return": 0
     }
 };
