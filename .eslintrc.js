@@ -25,6 +25,7 @@ module.exports = {
         "no-tabs": 0,
         "indent": [
             "error", 4
-        ]
+        ],
+        "comma-dangle": ["error", "never"]
     }
 };
