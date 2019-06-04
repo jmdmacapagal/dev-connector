@@ -8,25 +8,25 @@ const User = require('../../models/User');
 // @desc    test route
 // @access  public
 
-
 router.post('/', [
     check('name', 'Please enter your name.').not().isEmpty(), // field validation parameters
     check('email', 'Please enter a valid email address.').isEmail(),
-    check('password', 'Please enter password with a minimum of 6 characters.')
+    check('password', 'Please enter password, minimun of 6 characters.').isLength({ min: 6 })
 ], async (req, res) => {
-    const error = validationResult(req); // input validation
+    const error = validationResult(req); // check input if have no error
     if (!error.isEmpty()) {
         return res.status(400).send({ error: error.array() });
     }
 
-    const { name, email, password } = req.body; // variable deconstruction
+    const { name, email, password } = req.body;
 
     try {
         let user = await User.findOne({ email }); // check if email already exists
         if (user) {
             return res.status(400).send({ error: [{ msg: 'Email Already Exists.' }] });
         }
-        // setup gravatar
+
+        // generate gravatar
         const avatar = gravatar.url(email, {
             s: '200',
             r: 'pg',
@@ -46,6 +46,10 @@ router.post('/', [
         user.password = await bcrypt.hash(password, salt);
 
         // save user to db
+        // name: req.body.name || name
+        // email: req.body.email || email
+        // avatar: avatar (gravatar)
+        // password: user.password ( hashed from req.body.password )
         await user.save();
         res.send('User Registered');
     } catch (err) {
