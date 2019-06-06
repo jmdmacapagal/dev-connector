@@ -13,9 +13,9 @@ const User = require('../../models/User');
 router.post('/', [
     check('name', 'Please enter your name.').not().isEmpty(), // field validation parameters
     check('email', 'Please enter a valid email address.').isEmail(),
-    check('password', 'Please enter a minimum of 6 characters.').isLength({ min: 6 })
+    check('password', 'Please enter a password with minimum of 6 characters').isLength({ min: 6 })
 ], async (req, res) => {
-    const error = validationResult(req); // check if input has no errors
+    const error = validationResult(req); // check if valid input
     if (!error.isEmpty()) {
         return res.status(400).send({ error: error.array() });
     }
@@ -23,10 +23,10 @@ router.post('/', [
     const { name, email, password } = req.body;
 
     try {
-        // check if email already exist
+        // check if email exists
         let user = await User.findOne({ email });
         if (user) {
-            return res.status(400).send({ error: [{ msg: 'Email Already Exist' }] });
+            return res.status(400).send({ error: [{ msg: 'Email Already Exists.' }] });
         }
 
         // set up gravatar
@@ -36,7 +36,7 @@ router.post('/', [
             d: 'mm'
         });
 
-        // create new user instance
+        // create new User instance
         user = new User({
             name,
             email,
@@ -48,14 +48,13 @@ router.post('/', [
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(password, salt);
 
-        // save user to db
         // name: req.body.name || name
         // email: req.body.email || email
         // avatar: avatar (gravatar)
         // password: user.password ( hashed from req.body.password )
-        await user.save();
+        await user.save(); // save user to db
 
-        // get jwt token
+        // get token
         const payload = {
             user: {
                 id: user.id
@@ -63,13 +62,13 @@ router.post('/', [
         };
 
         jwt.sign(payload, config.get('jwtSecret'),
-            { expiresIn: 3600000 }, (err, token) => {
+            { expiresIn: 36000000 }, (err, token) => {
                 if (err) throw err;
                 res.json({ token });
             });
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Server Error.');
+        res.send('Server Error');
     }
 });
 
