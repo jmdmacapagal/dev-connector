@@ -19,14 +19,14 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
-// @route   GET api/auth
+// @route   POST api/auth
 // @desc    Authenticate user & get token
 // @access  public
 router.post('/', [
-    check('email', 'Please enter a valid email address.').isEmail(),
+    check('email', 'Please enter a valid email address.').isEmail(), // field validation parameters
     check('password', 'Password is required.').exists()
 ], async (req, res) => {
-    const error = validationResult(req);
+    const error = validationResult(req); // check if have errors in validation
     if (!error.isEmpty()) {
         return res.status(400).send({ error: error.array() });
     }
@@ -34,16 +34,19 @@ router.post('/', [
     const { email, password } = req.body;
 
     try {
+        // check if email exists
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).send({ msg: 'Invalid Email or Password' });
         }
 
+        // check if password from db and input match
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).send({ msg: 'Invalid Email or Password' });
         }
 
+        // get token
         const payload = {
             user: {
                 id: user.id
