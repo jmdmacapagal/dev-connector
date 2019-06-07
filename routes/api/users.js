@@ -2,8 +2,8 @@ const router = require('express').Router();
 const { check, validationResult } = require('express-validator/check');
 const gravatar = require('gravatar');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const config = require('config');
+const jwt = require('jsonwebtoken');
 const User = require('../../models/User');
 
 // @route   GET api/users
@@ -11,11 +11,11 @@ const User = require('../../models/User');
 // @access  public
 
 router.post('/', [
-    check('name', 'Please enter your name.').not().isEmpty(), // field validation parameters
+    check('name', 'Please enter your name.').not().isEmpty(), // field validator parameters
     check('email', 'Please enter a valid email address.').isEmail(),
-    check('password', 'Please enter a password with minimum of 6 characters').isLength({ min: 6 })
+    check('password', 'Please enter a minimum of 6 characters.').isLength({ min: 6 })
 ], async (req, res) => {
-    const error = validationResult(req); // check if valid input
+    const error = validationResult(req); // check if there is no error in input
     if (!error.isEmpty()) {
         return res.status(400).send({ error: error.array() });
     }
@@ -23,10 +23,9 @@ router.post('/', [
     const { name, email, password } = req.body;
 
     try {
-        // check if email exists
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ email }); // check if email already exist
         if (user) {
-            return res.status(400).send({ error: [{ msg: 'Email Already Exists.' }] });
+            return res.status(400).send({ error: [{ msg: 'Email Already Exist' }] });
         }
 
         // set up gravatar
@@ -36,7 +35,7 @@ router.post('/', [
             d: 'mm'
         });
 
-        // create new User instance
+        // create new user instance
         user = new User({
             name,
             email,
@@ -52,9 +51,9 @@ router.post('/', [
         // email: req.body.email || email
         // avatar: avatar (gravatar)
         // password: user.password ( hashed from req.body.password )
-        await user.save(); // save user to db
+        await user.save();
 
-        // get token
+        // generate token
         const payload = {
             user: {
                 id: user.id
@@ -62,13 +61,13 @@ router.post('/', [
         };
 
         jwt.sign(payload, config.get('jwtSecret'),
-            { expiresIn: 36000000 }, (err, token) => {
+            { expiresIn: 36000000000 }, (err, token) => {
                 if (err) throw err;
                 res.json({ token });
             });
     } catch (err) {
         console.error(err.message);
-        res.send('Server Error');
+        res.send('Server Error.');
     }
 });
 
