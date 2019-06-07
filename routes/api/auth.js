@@ -1,7 +1,10 @@
 const router = require('express').Router();
+const { check, validationResult } = require('express-validator/check');
+const jwt = require('jsonwebtoken');
+const config = require('config');
+const bcrypt = require('bcryptjs');
 const auth = require('../../middleware/auth');
 const User = require('../../models/User');
-
 // @route   GET api/users
 // @desc    test route
 // @access  public
@@ -11,9 +14,52 @@ router.get('/', auth, async (req, res) => {
         res.json(user);
     } catch (error) {
         console.error(error.message);
-        res.send('Server Error');
+        res.status(500).send('Server Error.');
     }
 });
 
+// @route   GET api/auth
+// @desc    Authenticate user & token
+// @access  public
+router.post('/', [
+    check('email', 'Please enter a valid email address').isEmail(), // field validation parametes
+    check('password', 'Password is required.')
+], async (req, res) => {
+    const error = validationResult(req); // check if there is error
+    if (!error.isEmpty()) {
+        return res.status(400).send({ error: error.array() });
+    }
+
+    const { email, password } = req.body;
+
+    try {
+        // check if email exists
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).send('Wrong Email or Password');
+        }
+
+        // check if password entered and password from db match
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).send('Wrong Email or Password');
+        }
+
+        const payload = {
+            user: {
+                id: user.id
+            }
+        };
+
+        jwt.sign(payload, config.get('jwtSecret'),
+            { expiresIn: 3600000 }, (err, token) => {
+                if (err) throw err;
+                res.json({ token });
+            });
+    } catch (err) {
+        console.error(err.message);
+        res.send('Server Error');
+    }
+});
 
 module.exports = router;
