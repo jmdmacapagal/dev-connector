@@ -1,10 +1,11 @@
 const router = require('express').Router();
 const { check, validationResult } = require('express-validator/check');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('config');
-const bcrypt = require('bcryptjs');
 const auth = require('../../middleware/auth');
 const User = require('../../models/User');
+
 // @route   GET api/users
 // @desc    test route
 // @access  public
@@ -14,18 +15,18 @@ router.get('/', auth, async (req, res) => {
         res.json(user);
     } catch (error) {
         console.error(error.message);
-        res.status(500).send('Server Error.');
+        res.send('Server Error');
     }
 });
 
 // @route   GET api/auth
-// @desc    Authenticate user & token
+// @desc    Authenticate user & get token
 // @access  public
 router.post('/', [
-    check('email', 'Please enter a valid email address').isEmail(), // field validation parametes
-    check('password', 'Password is required.')
+    check('email', 'Please enter a valid email address.').isEmail(),
+    check('password', 'Password is required.').exists()
 ], async (req, res) => {
-    const error = validationResult(req); // check if there is error
+    const error = validationResult(req);
     if (!error.isEmpty()) {
         return res.status(400).send({ error: error.array() });
     }
@@ -33,16 +34,14 @@ router.post('/', [
     const { email, password } = req.body;
 
     try {
-        // check if email exists
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).send('Wrong Email or Password');
+            return res.status(400).send({ msg: 'Invalid Email or Password' });
         }
 
-        // check if password entered and password from db match
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).send('Wrong Email or Password');
+            return res.status(400).send({ msg: 'Invalid Email or Password' });
         }
 
         const payload = {
