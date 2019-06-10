@@ -10,7 +10,7 @@ const User = require('../../models/User');
 router.get('/me', auth, async (req, res) => {
     // get profile from user schema, with id from req.user -- get name and avatar prop from user
     try {
-        const profile = await Profile.findOne({ user: req.user.id }).populate(['name', 'avatar']);
+        const profile = await Profile.findOne({ user: req.user.id }).populate('user', ['name', 'avatar']);
         if (!profile) {
             return res.status(400).json({ msg: 'There is no profile from this user.' });
         }
@@ -26,12 +26,12 @@ router.get('/me', auth, async (req, res) => {
 // @desc    Create and Update User profile
 // @access  Private
 router.post('/', [auth, [
-    check('status', 'Status is required.').not().isEmpty(), // field validation parameters
-    check('skills', 'Skills is required').not().isEmpty()
+    check('skills', 'Skills is required').not().isEmpty(), // field validation parameters
+    check('status', 'Status is required').not().isEmpty()
 ]], async (req, res) => {
-    const error = validationResult(req); // check fields if have errors
+    const error = validationResult(req); // check if validation have no error
     if (!error.isEmpty()) {
-        return res.status(400).json({ error: error.array() });
+        return res.status(400).send({ error: error.array() });
     }
 
     const {
@@ -44,12 +44,12 @@ router.post('/', [auth, [
         skills,
         twitter,
         facebook,
-        youtube,
         instagram,
+        youtube,
         linkedin
     } = req.body; // destructuring of req.body
 
-    // build profileFields objects
+    // build profileFields object
     const profileFields = {};
     profileFields.user = req.user.id;
     if (company) profileFields.company = company;
@@ -58,34 +58,72 @@ router.post('/', [auth, [
     if (bio) profileFields.bio = bio;
     if (status) profileFields.status = status;
     if (githubusername) profileFields.githubusername = githubusername;
+    if (bio) profileFields.bio = bio;
     if (skills) profileFields.skills = skills.split(',').map(skill => skill.trim());
 
     // build profileFields.social object
     profileFields.social = {};
     if (twitter) profileFields.social.twitter = twitter;
     if (facebook) profileFields.social.facebook = facebook;
-    if (youtube) profileFields.social.youtube = youtube;
     if (instagram) profileFields.social.instagram = instagram;
+    if (youtube) profileFields.social.youtube = youtube;
     if (linkedin) profileFields.social.linkedin = linkedin;
 
     try {
+        // search if profile exist
         let profile = await Profile.findOne({ user: req.user.id });
-        // update profile if existing
+        // update if existing
         if (profile) {
-            // can use findOneAndUpdate but have deprecation warning
-            profile = await Profile.updateMany({ user: req.user.id },
+            profile = await Profile.findOneAndUpdate({ user: req.user.id },
                 { $set: profileFields },
                 { new: true });
             return res.json(profile);
         }
 
-        // create if don't exist
+        // create if not exisiting
         profile = new Profile(profileFields);
         await profile.save();
         res.json(profile);
     } catch (err) {
         console.error(err.message);
-        res.status(500).json('Server Error');
+        res.status(500).send('Server Error');
     }
 });
+
+// @route   Get api/profile
+// @desc    get all profiles
+// @access  Public
+router.get('/', async (req, res) => {
+    try {
+        // find all existing profiles
+        const profiles = await Profile.find().populate('user', ['name', 'avatar']);
+        if (!profiles) { // check if there are profiles
+            return res.status(400).json({ error: 'There are no profiles' });
+        }
+        res.json(profiles);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   Get api/profile/user/:user_id
+// @desc    Get profile by user id
+// @access  Public
+router.get('/user/:user_id', async (req, res) => {
+    try {
+        const profile = await Profile.findOne({ user: req.params.user_id }).populate('user', ['name', 'avatar']);
+        if (!profile) {
+            return res.status(400).json({ msg: 'Profile not found.' });
+        }
+        res.json(profile);
+    } catch (error) {
+        console.error(error.message);
+        if (error.kind === 'ObjectId') {
+            return res.status(400).json({ msg: 'Profile not found.' });
+        }
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;
