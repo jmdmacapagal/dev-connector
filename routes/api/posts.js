@@ -2,36 +2,39 @@ const router = require('express').Router();
 const { check, validationResult } = require('express-validator/check');
 const auth = require('../../middleware/auth');
 
-const Post = require('../../models/Post');
 const User = require('../../models/User');
-const Profile = require('../../models/Profile');
+// const Profile = require('../../models/Profile');
+const Post = require('../../models/Post');
 
 // @route   POST api/posts
 // @desc    create a post
 // @access  private
 router.post('/', [auth, [
-    check('text', 'Text is required.').not().isEmpty() // field validation parametes
+    check('text', 'Text is required.').not().isEmpty() // field validation parameters
 ]], async (req, res) => {
     const error = validationResult(req); // check if have validation errors
     if (!error.isEmpty()) {
-        return res.status(400).json({ error: error.array });
+        return res.status(400).json({ error: error.array() });
     }
 
     try {
-        // get user by id, password not included
+        // find user by id
         const user = await User.findById(req.user.id).select('-password');
-        // create new instance of post
+
+        // create new Post instance
         const newPost = new Post({
             user: req.user.id,
             text: req.body.text,
             name: user.name,
             avatar: user.avatar
         });
-        await newPost.save(); // save to db
+
+        // save to db
+        await newPost.save();
         res.json(newPost);
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Server Error');
+        res.status(500).send('Server Error.');
     }
 });
 
@@ -40,15 +43,14 @@ router.post('/', [auth, [
 // @access  private
 router.get('/', auth, async (req, res) => {
     try {
-        // find all posts, sort from last posted
+        // find all post, and sort it by last added
         const posts = await Post.find().sort({ date: -1 });
         res.json(posts);
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error.');
     }
 });
-
 
 // @route   GET api/posts/:id
 // @desc    get post by id
@@ -58,14 +60,14 @@ router.get('/:id', auth, async (req, res) => {
         // find post by id
         const post = await Post.findById(req.params.id);
 
-        // check if post exists
+        // check if post exist
         if (!post) {
             return res.status(404).json({ msg: 'Post not found.' });
         }
         res.json(post);
-    } catch (error) {
-        console.error(error.message);
-        if (error.kind === 'ObjectId') {
+    } catch (err) {
+        console.error(err.message);
+        if (err.kind === ' ObjectId') {
             return res.status(404).json({ msg: 'Post not found.' });
         }
         res.status(500).send('Server Error.');
@@ -77,7 +79,6 @@ router.get('/:id', auth, async (req, res) => {
 // @access  private
 router.delete('/:id', auth, async (req, res) => {
     try {
-        // find pst by id
         const post = await Post.findById(req.params.id);
 
         // check if post exist
@@ -85,15 +86,17 @@ router.delete('/:id', auth, async (req, res) => {
             return res.status(404).json({ msg: 'Post not found.' });
         }
 
-        // check if current user === to post owner
+        // check if current user is the owner of the post
         if (post.user.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized.' });
+            return res.status(404).json({ msg: 'User not authorized.' });
         }
-        await post.remove(); // delete from db
+
+        // remove from db
+        await post.remove();
         res.json({ msg: 'Post removed.' });
-    } catch (error) {
-        console.error(error.message);
-        if (error.kind === 'ObjectId') {
+    } catch (err) {
+        console.error(err.message);
+        if (err.kind === ' ObjectId') {
             return res.status(404).json({ msg: 'Post not found.' });
         }
         res.status(500).send('Server Error.');
