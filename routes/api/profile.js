@@ -145,11 +145,11 @@ router.delete('/', auth, async (req, res) => {
 // @desc    add profile experience
 // @access  Private
 router.put('/experience', [auth, [
-    check('title', 'Title is required.').not().isEmpty(),
+    check('title', 'Title is required.').not().isEmpty(), // field validation parameters
     check('company', 'Company is required.').not().isEmpty(),
     check('from', 'From date is required.').not().isEmpty()
 ]], async (req, res) => {
-    const error = validationResult(req);
+    const error = validationResult(req); // check if validation have error
     if (!error.isEmpty()) {
         return res.status(400).json({ error: error.array });
     }
@@ -162,8 +162,9 @@ router.put('/experience', [auth, [
         to,
         current,
         description
-    } = req.body;
+    } = req.body; // destructuring req.body
 
+    // create newExp object that will contain all input from req.body
     const newExp = {
         title,
         company,
@@ -175,13 +176,34 @@ router.put('/experience', [auth, [
     };
 
     try {
+        // find profile
         const profile = await Profile.findOne({ user: req.user.id });
+        // unshift newExp to profile.experience array
         profile.experience.unshift(newExp);
-        await profile.save();
+        await profile.save(); // save to db
         res.json(profile);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error.');
+    }
+});
+
+// @route   PUT api/profile/experience/:exp_id
+// @desc    delete experience
+// @access  Private
+router.delete('/experience/:exp_id', auth, async (req, res) => {
+    try {
+        // search profile of user
+        const profile = await Profile.findOne({ user: req.user.id });
+        // get index of item to delete
+        const removeIndex = profile.experience.map(item => item.id).indexOf(req.params.exp_id);
+        // remove using splice
+        profile.experience.splice(removeIndex, 1);
+        await profile.save(); // save to db
+        res.json(profile);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
     }
 });
 
