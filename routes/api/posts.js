@@ -10,22 +10,24 @@ const Profile = require('../../models/Profile');
 // @desc    create a post
 // @access  private
 router.post('/', [auth, [
-    check('text', 'Text is required.').not().isEmpty()
+    check('text', 'Text is required.').not().isEmpty() // field validation parametes
 ]], async (req, res) => {
-    const error = validationResult(req);
+    const error = validationResult(req); // check if have validation errors
     if (!error.isEmpty()) {
         return res.status(400).json({ error: error.array });
     }
 
     try {
+        // get user by id, password not included
         const user = await User.findById(req.user.id).select('-password');
+        // create new instance of post
         const newPost = new Post({
             user: req.user.id,
             text: req.body.text,
             name: user.name,
             avatar: user.avatar
         });
-        await newPost.save();
+        await newPost.save(); // save to db
         res.json(newPost);
     } catch (err) {
         console.error(err.message);
@@ -38,6 +40,7 @@ router.post('/', [auth, [
 // @access  private
 router.get('/', auth, async (req, res) => {
     try {
+        // find all posts, sort from last posted
         const posts = await Post.find().sort({ date: -1 });
         res.json(posts);
     } catch (error) {
@@ -52,7 +55,10 @@ router.get('/', auth, async (req, res) => {
 // @access  private
 router.get('/:id', auth, async (req, res) => {
     try {
+        // find post by id
         const post = await Post.findById(req.params.id);
+
+        // check if post exists
         if (!post) {
             return res.status(404).json({ msg: 'Post not found.' });
         }
@@ -71,16 +77,19 @@ router.get('/:id', auth, async (req, res) => {
 // @access  private
 router.delete('/:id', auth, async (req, res) => {
     try {
+        // find pst by id
         const post = await Post.findById(req.params.id);
-        // check post
+
+        // check if post exist
         if (!post) {
             return res.status(404).json({ msg: 'Post not found.' });
         }
-        // check the user
+
+        // check if current user === to post owner
         if (post.user.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized' });
+            return res.status(401).json({ msg: 'User not authorized.' });
         }
-        await post.remove();
+        await post.remove(); // delete from db
         res.json({ msg: 'Post removed.' });
     } catch (error) {
         console.error(error.message);
