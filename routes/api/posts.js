@@ -102,21 +102,53 @@ router.delete('/:id', auth, async (req, res) => {
         res.status(500).send('Server Error.');
     }
 });
+
 // @route   PUT api/posts/like/:id
 // @desc    like a post
 // @access  private
 router.put('/like/:id', auth, async (req, res) => {
     try {
-        // find the post by id
+        // find post by id
         const post = await Post.findById(req.params.id);
 
-        // check if post has been liked already by the user
-        if (post.likes.filter(like => like.id === req.user.id).length > 0) {
-            return res.status(400).json({ msg: 'Post already liked.' });
+        // check if the post has been already liked by the user
+        if (post.likes.filter(like => like.user.toString() === req.user.id).length > 0) {
+            return res.status(400).json({ msg: 'Post has been liked.' });
         }
 
-        // add to likes array using unshift
+        // insert to like array using unshift
         post.likes.unshift({ user: req.user.id });
+
+        // save to db
+        await post.save();
+        res.json(post.likes);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error.');
+    }
+});
+
+// @route   PUT api/posts/unlike/:id
+// @desc    unlike a post
+// @access  private
+router.put('/unlike/:id', auth, async (req, res) => {
+    try {
+        // find post by id
+        const post = await Post.findById(req.params.id);
+
+        // check if has no likes
+        if (post.likes.filter(like => like.user.toString() === req.user.id).length === 0) {
+            return res.status(400).json({ msg: 'Post has no likes.' });
+        }
+
+        // get index
+        const removeIndex = post.likes.map(like => like.user.toString()).indexOf(req.user.id);
+
+        // remove like using splice
+        post.likes.splice(removeIndex, 1);
+
+        // save to db
+        await post.save();
         res.json(post.likes);
     } catch (err) {
         console.error(err.message);
