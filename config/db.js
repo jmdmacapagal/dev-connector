@@ -5,7 +5,7 @@ const db = config.get('mongoURI');
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(db, { useNewUrlParser: true, useCreateIndex: true }, () => console.log('Mongodb connected'));
+        await mongoose.connect(db, { useNewUrlParser: true, useCreateIndex: true, useFindAndModify: false }, () => console.log('Mongodb connected'));
     } catch (error) {
         console.error(error.message);
         // exit process with failure
