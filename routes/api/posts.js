@@ -1,3 +1,5 @@
+/* eslint-disable max-len */
+/* eslint-disable no-shadow */
 const router = require('express').Router();
 const { check, validationResult } = require('express-validator/check');
 const auth = require('../../middleware/auth');
@@ -150,6 +152,69 @@ router.put('/unlike/:id', auth, async (req, res) => {
         // save to db
         await post.save();
         res.json(post.likes);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error.');
+    }
+});
+
+// @route   POST api/posts/comment/:id
+// @desc    create comment on a post
+// @access  private
+router.post('/comment/:id', [auth, [
+    check('text', 'Text is required.').not().isEmpty()
+]], async (req, res) => {
+    const error = validationResult(req);
+    if (!error.isEmpty()) {
+        return res.status(400).json({ error: error.array() });
+    }
+
+    try {
+        // get user by id
+        const user = await User.findById(req.user.id).select('-password');
+
+        // get post to comment by id
+        const post = await Post.findById(req.params.id);
+
+        // create newComment object
+        const newComment = {
+            text: req.body.text,
+            user: req.user.id,
+            name: user.name,
+            avatar: user.avatar
+        };
+
+        // insert into comments array
+        post.comments.unshift(newComment);
+
+        // save to db
+        await post.save();
+        res.json(post.comments);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error.');
+    }
+});
+
+// @route   DELETE api/posts/comment/:id/:comment_id
+// @desc    delete comment
+// @access  private
+router.delete('/comment/:id/:comment_id', auth, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        const comment = post.comments.find(comment => comment.id === req.params.comment_id);
+
+        if (!comment) {
+            return res.status(404).json({ msg: 'Comment does not exist.' });
+        }
+
+        if (comment.user.toString() !== req.user.id) {
+            return res.status(401).json({ msg: 'User not authorized.' });
+        }
+
+        await post.comments.remove(comment);
+        await post.save();
+        res.json(post.comments);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error.');
